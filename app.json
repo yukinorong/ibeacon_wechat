@@ -1,0 +1,10 @@
+{
+    "pages": [
+      "pages/beacon/beacon"
+    ],
+    "window": {
+        "backgroundTextStyle": "light",
+        "navigationBarBackgroundColor": "#fff",
+        "navigationBarTextStyle": "black"
+    }
+}
