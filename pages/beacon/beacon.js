@@ -11,7 +11,28 @@ function Beacon(uuid, posx, posy, rssi = null){
   this.uuid = uuid;
   this.rssi = rssi;
   this.distance = 1;
-  this.position = new Position(posx,posy)
+  this.position = new Position(posx,posy);
+  this.prevData = 0;
+  this.p = 10;
+  this.q = 0.0001;
+  this.r = 0.005;
+  this.kGain = 0;
+  this.countkalman = 0;;
+
+}
+
+Beacon.prototype.kalmanSmoothing = function () {
+  this.countkalman += 1
+  if (this.countkalman % 100 === 0) {
+    this.prevData = 0, this.p = 10, this.q = 0.0001, this.r = 0.005, this.kGain = 0, this.countkalman = 0;
+  }
+  this.p = this.p + this.q;
+  this.kGain = this.p / (this.p + this.r);
+
+  this.rssi = this.prevData + (this.kGain * (this.rssi - this.prevData));
+  this.p = (1 - this.kGain) * this.p;
+
+  this.prevData = this.rssi;
 }
 
 Beacon.prototype.getDistance = function(){
@@ -21,7 +42,7 @@ Beacon.prototype.getDistance = function(){
   }
   var oldDistance = this.distance
   var a = 0.4  //添加系数，减少波动
-  var txPower = -69 //hard coded power value. Usually ranges between -59 to -65   
+  var txPower = -76 //hard coded power value. Usually ranges between -59 to -65   
   if (this.rssi == 0) {
     return -1.0;
   }
@@ -34,13 +55,14 @@ Beacon.prototype.getDistance = function(){
   }
   this.distance = oldDistance * (1 - a) + newDistance * a
 }
-// ,"436401d0-3344-ac5d-1111-cc78ab24d6f2",
+
 var beaconsUUID = ["436401d0-3344-ac5d-1111-cc78ab8e96bb", "436401d0-3344-ac5d-1111-cc78ab1e53d1", "436401d0-3344-ac5d-1111-cc78ab1eec06", "436401d0-3344-ac5d-1111-cc78ab24d6f2", "436401d0-3344-ac5d-1111-cc78ab249de2"];
 
-var mybeacon1 = new Beacon(beaconsUUID[0], 6.38, 3.71)
-var mybeacon2 = new Beacon(beaconsUUID[1], 1.70, 3.2)
-var mybeacon3 = new Beacon(beaconsUUID[2], 6.38, 0.53)
-var mybeacon4 = new Beacon(beaconsUUID[3], 3.88, 1.6)
+var mybeacon1 = new Beacon(beaconsUUID[0], 5.70, 3.0)
+var mybeacon2 = new Beacon(beaconsUUID[1], 1.70, 3.0)
+var mybeacon3 = new Beacon(beaconsUUID[2], 4.50, 0)
+
+var mybeacon4 = new Beacon(beaconsUUID[3], 3.70, 1.5)
 var mybeacon5 = new Beacon(beaconsUUID[4], 1.70, 0)
 
 var mybeacons = new Array(mybeacon1, mybeacon2, mybeacon3, mybeacon4, mybeacon5)
@@ -53,28 +75,29 @@ var offset =  30
 var count = 0
 var lossSum = 0
 
-// var testBeacons = [
-//   { "uuid": "436401d0-3344-ac5d-1111-cc78ab8e96bb", "rssi": -70.3 },
-//   { "uuid": "436401d0-3344-ac5d-1111-cc78ab1e53d1", "rssi": -70.3 },
-//   { "uuid": "436401d0-3344-ac5d-1111-cc78ab1eec06", "rssi": -71.5 }
-// ]
-
 var testBeaconsForComputerPosition = [
   { distance: 2, position: { x: 1, y: 1 } },
   { distance: 2.828, position: { x: 1, y: 5 } },
   { distance: 0, position: { x: 5, y: 5 } }
 ]
 
+//卡尔曼滤波系数
+
+
 Page({
   data: {
     userPosition: { "x": 3, "y": 1.4 },
-    test:0,
+    test1:0,
+    test2:0,
     realPosition: { "x": 2, "y": 2 },
     loss:1
   },
+  refresh:function(){
+    prevData = 0, p = 10, q = 0.0001, r = 0.005, kGain = 0;
+  },
 
   onReady:function(){
-    // this.drawCanvas()
+    this.drawCanvas()
   },
 
   onLoad: function () {
@@ -163,10 +186,12 @@ Page({
     //利用res信息给 mybeacons 数组赋值， 并利用自带方法求距离distance
     res.beacons.forEach(function(value){
       var v = value
+      var rssi = 
       mybeacons.forEach(function(value){
         // 此处注意名字是否相同
         if(v.uuid == value.uuid && v.rssi != null){
           value.rssi = v.rssi
+          value.kalmanSmoothing()
           value.getDistance()
         }
       })
@@ -312,6 +337,8 @@ Page({
     }
     // arr2.push(arr.sort(compare).slice(0, n));
     return arr.sort(compare).slice(0, n)
-  } 
+  }, 
+
+
 
 })

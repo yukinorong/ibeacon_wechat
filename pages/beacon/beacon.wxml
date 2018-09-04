@@ -19,4 +19,5 @@
     <view>
       <canvas canvas-id="canvas" class="canvas"></canvas>
     </view>
+
 </view>
